@@ -159,10 +159,22 @@ def new_resume_page(request: Request):
 @app.post("/resume/generate", response_class=HTMLResponse)
 def generate_resume_endpoint(
     request: Request,
-    full_name: str = Form(...),
-    email: str = Form(...),
+    # 结构化字段
+    name: str = Form(..., alias="name"),
+    contact_email: str = Form(..., alias="contact_email"),
     phone: str = Form(""),
-    raw_text: str = Form(...),
+    location: str = Form(""),
+    linkedin: str = Form(""),
+    github: str = Form(""),
+    website: str = Form(""),
+    headline: str = Form(""),
+    skills: str = Form(""),
+    language: str = Form("zh"),
+    # 大文本块
+    experience_text: str = Form("", alias="experience_text"),
+    education_text: str = Form("", alias="education_text"),
+    free_text: str = Form("", alias="free_text"),
+    job_desc: str = Form("", alias="job_desc"),
     db: Session = Depends(get_db)
 ):
     """
@@ -173,15 +185,32 @@ def generate_resume_endpoint(
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    # 1. 调用 Agent 服务生成结构化数据
-    # Call Agent Service
-    resume_out = generate_resume(raw_text, full_name, email, phone)
+    # 1. 组合所有信息调用 Agent
+    # Combine all inputs and call Agent
+    resume_out = generate_resume(
+        name=name,
+        email=contact_email,
+        phone=phone,
+        location=location,
+        linkedin=linkedin,
+        github=github,
+        website=website,
+        headline=headline,
+        skills=skills,
+        experience_text=experience_text,
+        education_text=education_text,
+        free_text=free_text,
+        job_desc=job_desc,
+        language=language
+    )
 
     # 2. 保存到数据库
     # Save to DB
     new_resume = models.Resume(
         user_id=user_id,
-        title=f"{full_name}的简历",
+        title=f"{name}的简历",
+        content_json=resume_out.model_dump_json() # Pydantic v2
+    )
         content_json=resume_out.model_dump_json() # Pydantic v2
     )
     db.add(new_resume)

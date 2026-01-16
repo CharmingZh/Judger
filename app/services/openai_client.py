@@ -49,16 +49,25 @@ def test_api_connection() -> Dict[str, Any]:
             "error": str(e)
         }
 
-def generate_resume(raw_text: str, user_name: str, user_email: str, user_phone: str) -> ResumeOut:
+def generate_resume(
+    name: str,
+    email: str,
+    phone: str,
+    location: str,
+    linkedin: str,
+    github: str,
+    website: str,
+    headline: str,
+    skills: str,
+    experience_text: str,
+    education_text: str,
+    free_text: str,
+    job_desc: str,
+    language: str
+) -> ResumeOut:
     """
     调用 OpenAI API 生成简历数据结构
     Call OpenAI API to generate resume data structure
-    
-    :param raw_text: 用户输入的原始文本 (User raw input)
-    :param user_name: 用户姓名 (User name)
-    :param user_email: 用户邮箱 (User email)
-    :param user_phone: 用户电话 (User phone)
-    :return: ResumeOut Pydantic model
     """
     
     system_prompt = load_system_prompt()
@@ -66,13 +75,33 @@ def generate_resume(raw_text: str, user_name: str, user_email: str, user_phone: 
     # 构建用户输入 Prompt
     # Build User Prompt
     user_content = f"""
-    用户信息 (User Info)：
-    Name: {user_name}
-    Email: {user_email}
-    Phone: {user_phone}
+    # Prefer Output Language
+    {language}
 
-    用户原始输入材料 (Raw Input)：
-    {raw_text}
+    # User Basic Info
+    Name: {name}
+    Email: {email}
+    Phone: {phone}
+    Location: {location}
+    LinkedIn: {linkedin}
+    GitHub: {github}
+    Website: {website}
+    Headline: {headline}
+
+    # Skills Input
+    {skills}
+
+    # Experience Input
+    {experience_text}
+
+    # Education Input
+    {education_text}
+
+    # Additional / Free Text Input
+    {free_text}
+
+    # Target Job JD
+    {job_desc}
     """
 
 
