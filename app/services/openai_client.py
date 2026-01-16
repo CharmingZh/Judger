@@ -2,10 +2,23 @@ from __future__ import annotations
 
 import json
 from typing import Any, Dict
+from pathlib import Path
 
 from openai import OpenAI
 from ..core.config import settings
 from ..core.schemas import ResumeOut
+
+# 加载 Prompt 文件
+PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "resume_generator_v1.txt"
+
+def load_system_prompt() -> str:
+    """Read system prompt from file"""
+    try:
+        return PROMPT_PATH.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Error loading prompt: {e}")
+        # Fallback prompt if file missing
+        return "You are a helpful resume assistant."
 
 # 初始化 OpenAI 客户端 (使用 core/config 中的配置)
 # Initialize OpenAI Client using core/config settings
@@ -36,16 +49,6 @@ def test_api_connection() -> Dict[str, Any]:
             "error": str(e)
         }
 
-SYSTEM_PROMPT = """\
-你是资深职业规划师与简历写作专家。
-你将基于用户提供的资料（可能包含“结构化字段 + 模糊/自由文本 + JD”）生成一份可投递的简历。
-硬性规则：
-1) 绝对不编造经历、公司、学校、日期、项目；如果缺失信息就留空或省略该条目。
-2) 尽量量化成果（如果用户给了数字才用数字；没有数字就用更稳健的描述）。
-3) 语言风格专业、干练。
-4) 输出必须严格符合提供的 JSON Schema。
-"""
-
 def generate_resume(raw_text: str, user_name: str, user_email: str, user_phone: str) -> ResumeOut:
     """
     调用 OpenAI API 生成简历数据结构
@@ -58,13 +61,19 @@ def generate_resume(raw_text: str, user_name: str, user_email: str, user_phone: 
     :return: ResumeOut Pydantic model
     """
     
+    system_prompt = load_system_prompt()
+
     # 构建用户输入 Prompt
     # Build User Prompt
     user_content = f"""
-    用户信息：
+    用户信息 (User Info)：
     Name: {user_name}
     Email: {user_email}
     Phone: {user_phone}
+
+    用户原始输入材料 (Raw Input)：
+    {raw_text}
+    """
 
     用户原始输入材料：
     {raw_text}
@@ -76,7 +85,7 @@ def generate_resume(raw_text: str, user_name: str, user_email: str, user_phone: 
         completion = client.beta.chat.completions.parse(
             model=settings.openai_model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
             ],
             response_format=ResumeOut,
