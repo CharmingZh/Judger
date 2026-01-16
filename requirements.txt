@@ -10,3 +10,4 @@ openai==1.60.2
 reportlab==4.2.5
 itsdangerous==2.2.0
 bcrypt==3.2.2
+pydantic-settings

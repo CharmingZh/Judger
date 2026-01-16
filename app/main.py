@@ -1,214 +1,260 @@
 from __future__ import annotations
 
-import json
 from fastapi import FastAPI, Request, Form, Depends
-from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.responses import Response as FastAPIResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
+from pathlib import Path
+import json
 
-from .config import SESSION_SECRET
-from .db import Base, engine, get_db
-from . import models_
-from .auth import get_user_by_email, create_user, verify_password
-from .openai_client import generate_resume
-from .schemas import ResumeOut
-from .pdf_export import build_resume_pdf
+# 更新模块引用 to core, api, services
+# Updated imports to core, api, services
+from .core.config import settings
+from .core.db import Base, engine, get_db
+from .core import models
+from .core.schemas import ResumeOut
 
+from .api.auth import get_user_by_email, create_user, verify_password
+from .services.openai_client import generate_resume
+from .services.pdf_export import build_resume_pdf
+
+# 创建数据库表
+# Create DB tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Resume Builder")
 
-# Cookie-based session. Stores session data inside cookie (signed).
-# Do NOT store secrets in request.session.
+# 配置 Session 中间件
+# Session Middleware Configuration
 app.add_middleware(
     SessionMiddleware,
-    secret_key=SESSION_SECRET,
+    secret_key=settings.session_secret,
     session_cookie="resume_builder_session",
     same_site="lax",
-    https_only=False,  # set True in production with HTTPS
+    https_only=False,  # 生产环境请设为 True
 )
-from pathlib import Path
-BASE_DIR = Path(__file__).resolve().parent.parent  # 指向项目根目录
+
+# 挂载静态文件和模板
+# Mount static files and templates
+BASE_DIR = Path(__file__).resolve().parent.parent  # 项目根目录 Project Root
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
 def require_login(request: Request) -> int | None:
+    """
+    检查用户是否登录
+    Check if user is logged in
+    """
     return request.session.get("user_id")
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
+    """
+    首页重定向
+    Home Redirect
+    """
     if require_login(request):
         return RedirectResponse(url="/dashboard", status_code=302)
     return RedirectResponse(url="/login", status_code=302)
 
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request, "title": "Register"})
+    """
+    注册页面
+    Register Page
+    """
+    return templates.TemplateResponse("register.html", {"request": request, "title": "注册 Register"})
 
 @app.post("/register", response_class=HTMLResponse)
 def register(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
-    existing = get_user_by_email(db, email)
-    if existing:
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "error": "该邮箱已注册。请直接登录。", "title": "Register"},
-        )
-    if len(password) < 6:
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "error": "密码至少 6 位。", "title": "Register"},
-        )
-
+    """
+    用户注册处理
+    User Registration Logic
+    """
+    user_exist = get_user_by_email(db, email)
+    if user_exist:
+        return templates.TemplateResponse("register.html", {
+            "request": request, 
+            "error": "该邮箱已被注册 Email already registered",
+            "title": "注册 Register"
+        })
+    
     user = create_user(db, email, password)
     request.session["user_id"] = user.id
     return RedirectResponse(url="/dashboard", status_code=302)
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "title": "Login"})
+    """
+    登录页面
+    Login Page
+    """
+    return templates.TemplateResponse("login.html", {"request": request, "title": "登录 Login"})
 
 @app.post("/login", response_class=HTMLResponse)
 def login(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
+    """
+    用户登录处理
+    User Login Logic
+    """
     user = get_user_by_email(db, email)
     if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse(
-            "login.html",
-            {"request": request, "error": "邮箱或密码错误。", "title": "Login"},
-        )
+        return templates.TemplateResponse("login.html", {
+            "request": request, 
+            "error": "用户名或密码错误 Invalid credentials",
+            "title": "登录 Login"
+        })
     request.session["user_id"] = user.id
     return RedirectResponse(url="/dashboard", status_code=302)
 
-@app.post("/logout")
+@app.get("/logout")
 def logout(request: Request):
+    """
+    退出登录
+    Logout
+    """
     request.session.clear()
     return RedirectResponse(url="/login", status_code=302)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
+    """
+    用户仪表盘（简历列表）
+    User Dashboard (Resume List)
+    """
     user_id = require_login(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    resumes = (
-        db.query(models_.Resume)
-        .filter(models_.Resume.user_id == user_id)
-        .order_by(models_.Resume.created_at.desc())
-        .limit(20)
-        .all()
-    )
-    rendered_resumes = [{"id": r.id, "created_at": r.created_at.strftime("%Y-%m-%d %H:%M")} for r in resumes]
+    resumes = db.query(models.Resume).filter(models.Resume.user_id == user_id).all()
+    
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request, 
+        "resumes": resumes,
+        "title": "仪表盘 Dashboard"
+    })
 
-    return templates.TemplateResponse(
-        "dashboard.html",
-        {"request": request, "resumes": rendered_resumes, "title": "Dashboard"},
-    )
+@app.get("/resume/new", response_class=HTMLResponse)
+def new_resume_page(request: Request):
+    """
+    新建简历页面
+    New Resume Page
+    """
+    if not require_login(request):
+        return RedirectResponse(url="/login", status_code=302)
+    return templates.TemplateResponse("resume.html", {"request": request, "title": "创建简历 Create Resume"})
 
-@app.post("/generate")
-def generate(
+@app.post("/resume/generate", response_class=HTMLResponse)
+def generate_resume_endpoint(
     request: Request,
-    db: Session = Depends(get_db),
-    language: str = Form("zh"),
-    headline: str = Form(""),
-    name: str = Form(""),
-    location: str = Form(""),
-    contact_email: str = Form(""),
+    full_name: str = Form(...),
+    email: str = Form(...),
     phone: str = Form(""),
-    linkedin: str = Form(""),
-    github: str = Form(""),
-    website: str = Form(""),
-    skills: str = Form(""),
-    experience_text: str = Form(""),
-    education_text: str = Form(""),
-    free_text: str = Form(""),
-    job_desc: str = Form(""),
+    raw_text: str = Form(...),
+    db: Session = Depends(get_db)
 ):
+    """
+    生成简历 API (调用 AI Agent)
+    Generate Resume API (Calls AI Agent)
+    """
     user_id = require_login(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    profile_fields = {
-        "headline": headline,
-        "contact": {
-            "name": name,
-            "location": location,
-            "email": contact_email,
-            "phone": phone,
-            "linkedin": linkedin,
-            "github": github,
-            "website": website,
-        },
-        "skills_raw": skills,
-        "experience_text": experience_text,
-        "education_text": education_text,
-    }
+    # 1. 调用 Agent 服务生成结构化数据
+    # Call Agent Service
+    resume_out = generate_resume(raw_text, full_name, email, phone)
 
-    try:
-        resume_obj = generate_resume(
-            profile_fields=profile_fields,
-            free_text=free_text,
-            job_desc=job_desc,
-            language=language,
-        )
-    except Exception as e:
-        # Re-render dashboard with error
-        return templates.TemplateResponse(
-            "dashboard.html",
-            {"request": request, "error": f"生成失败：{e}", "resumes": [], "title": "Dashboard"},
-        )
-
-    record = models_.Resume(
+    # 2. 保存到数据库
+    # Save to DB
+    new_resume = models.Resume(
         user_id=user_id,
-        input_json=json.dumps(
-            {"profile_fields": profile_fields, "free_text": free_text, "job_desc": job_desc, "language": language},
-            ensure_ascii=False,
-        ),
-        output_json=resume_obj.model_dump_json(ensure_ascii=False),
+        title=f"{full_name}的简历",
+        content_json=resume_out.model_dump_json() # Pydantic v2
     )
-    db.add(record)
+    db.add(new_resume)
     db.commit()
-    db.refresh(record)
+    db.refresh(new_resume)
 
-    return RedirectResponse(url=f"/resume/{record.id}", status_code=302)
+    return RedirectResponse(url=f"/resume/{new_resume.id}", status_code=302)
 
 @app.get("/resume/{resume_id}", response_class=HTMLResponse)
-def resume_view(resume_id: int, request: Request, db: Session = Depends(get_db)):
+def view_resume(request: Request, resume_id: int, db: Session = Depends(get_db)):
+    """
+    查看简历详情
+    View Resume Details
+    """
     user_id = require_login(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    r = db.query(models_.Resume).filter(models_.Resume.id == resume_id, models_.Resume.user_id == user_id).first()
-    if not r:
-        return RedirectResponse(url="/dashboard", status_code=302)
+    resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id, 
+        models.Resume.user_id == user_id
+    ).first()
+    
+    if not resume:
+        return Response("Resume not found", status_code=404)
 
-    resume = ResumeOut.model_validate_json(r.output_json)
-    return templates.TemplateResponse(
-        "resume.html",
-        {"request": request, "resume": resume, "resume_id": resume_id, "title": "Resume"},
-    )
+    # 解析 JSON
+    # Parse JSON
+    data = json.loads(resume.content_json)
+
+    return templates.TemplateResponse("resume.html", {
+        "request": request, 
+        "resume": data,
+        "resume_id": resume.id,
+        "title": "简历预览 Resume Preview"
+    })
 
 @app.get("/resume/{resume_id}/pdf")
-def resume_pdf(resume_id: int, request: Request, db: Session = Depends(get_db)):
+def download_pdf(request: Request, resume_id: int, db: Session = Depends(get_db)):
+    """
+    导出 PDF
+    Export PDF
+    """
     user_id = require_login(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    r = db.query(models_.Resume).filter(models_.Resume.id == resume_id, models_.Resume.user_id == user_id).first()
-    if not r:
-        return RedirectResponse(url="/dashboard", status_code=302)
+    resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id, 
+        models.Resume.user_id == user_id
+    ).first()
+    
+    if not resume:
+        return Response("Resume not found", status_code=404)
 
-    resume = ResumeOut.model_validate_json(r.output_json)
-    pdf_bytes = build_resume_pdf(resume)
+    data_dict = json.loads(resume.content_json)
+    # 转换为 Schema
+    try:
+        resume_schema = ResumeOut(**data_dict)
+    except Exception:
+        # 异常处理：返回空结构
+        resume_schema = ResumeOut(
+            personal_info={"name": "Error", "email": ""},
+            summary="Data validation error",
+            education=[],
+            work_experience=[],
+            skills=[]
+        )
 
-    headers = {"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'}
-    return FastAPIResponse(content=pdf_bytes, media_type="application/pdf", headers=headers)
+    pdf_bytes = build_resume_pdf(resume_schema)
+    
+    return Response(
+        content=pdf_bytes, 
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=resume_{resume_id}.pdf"}
+    )
