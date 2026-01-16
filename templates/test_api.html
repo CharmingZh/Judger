@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">OpenAI API 连接测试 (API Connection Test)</h4>
+            </div>
+            <div class="card-body">
+                <p>点击下方按钮向 OpenAI 发送一条简短的测试消息。</p>
+                <p>Click the button below to send a short test message to OpenAI.</p>
+                
+                <form action="/test-openai-run" method="post">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-robot"></i> 开始测试 (Start Test)
+                    </button>
+                </form>
+
+                {% if result %}
+                <hr>
+                <div class="mt-4">
+                    <h5>测试结果 (Result):</h5>
+                    {% if result.success %}
+                        <div class="alert alert-success">
+                            <strong><i class="bi bi-check-circle"></i> 连接成功 (Connected Successfully)!</strong>
+                            <p class="mt-2 mb-0"><strong>Response:</strong> {{ result.message }}</p>
+                            <small class="text-muted">Model: {{ result.model }}</small>
+                        </div>
+                        <div class="bg-light p-3 rounded">
+                            <h6>Usage Stats:</h6>
+                            <pre class="mb-0">{{ result.usage }}</pre>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <strong><i class="bi bi-exclamation-triangle"></i> 连接失败 (Connection Failed)</strong>
+                            <p class="mt-2 mb-0">{{ result.error }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+                当前使用的模型 (Current Model): <code>{{ model_name }}</code>
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <a href="/dashboard" class="btn btn-outline-secondary">返回仪表盘 (Back to Dashboard)</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

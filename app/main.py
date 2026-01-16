@@ -17,7 +17,7 @@ from .core import models
 from .core.schemas import ResumeOut
 
 from .api.auth import get_user_by_email, create_user, verify_password
-from .services.openai_client import generate_resume
+from .services.openai_client import generate_resume, test_api_connection
 from .services.pdf_export import build_resume_pdf
 
 # 创建数据库表
@@ -258,3 +258,36 @@ def download_pdf(request: Request, resume_id: int, db: Session = Depends(get_db)
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=resume_{resume_id}.pdf"}
     )
+
+@app.get("/test-openai", response_class=HTMLResponse)
+def test_openai_page(request: Request):
+    """
+    OpenAI 测试页面
+    Test OpenAI Page
+    """
+    if not require_login(request):
+        return RedirectResponse(url="/login", status_code=302)
+        
+    return templates.TemplateResponse("test_api.html", {
+        "request": request, 
+        "title": "测试 Test OpenAI API",
+        "model_name": settings.openai_model
+    })
+
+@app.post("/test-openai-run", response_class=HTMLResponse)
+def test_openai_run(request: Request):
+    """
+    执行 OpenAI 连接测试
+    Execute OpenAI Connection Test
+    """
+    if not require_login(request):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    result = test_api_connection()
+    
+    return templates.TemplateResponse("test_api.html", {
+        "request": request, 
+        "title": "测试结果 Test Result",
+        "result": result,
+        "model_name": settings.openai_model
+    })

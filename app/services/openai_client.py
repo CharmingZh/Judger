@@ -11,6 +11,31 @@ from ..core.schemas import ResumeOut
 # Initialize OpenAI Client using core/config settings
 client = OpenAI(api_key=settings.openai_api_key)
 
+def test_api_connection() -> Dict[str, Any]:
+    """
+    测试 OpenAI API 连接
+    Test OpenAI API Connection
+    """
+    try:
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[
+                {"role": "user", "content": "Say 'Health check passed' if you can hear me."}
+            ],
+            max_tokens=20
+        )
+        return {
+            "success": True, 
+            "message": response.choices[0].message.content,
+            "model": response.model,
+            "usage": response.usage.model_dump()
+        }
+    except Exception as e:
+        return {
+            "success": False, 
+            "error": str(e)
+        }
+
 SYSTEM_PROMPT = """\
 你是资深职业规划师与简历写作专家。
 你将基于用户提供的资料（可能包含“结构化字段 + 模糊/自由文本 + JD”）生成一份可投递的简历。
