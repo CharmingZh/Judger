@@ -75,9 +75,6 @@ def generate_resume(raw_text: str, user_name: str, user_email: str, user_phone: 
     {raw_text}
     """
 
-    用户原始输入材料：
-    {raw_text}
-    """
 
     # 调用 ChatCompletion (使用 tool_calls/function_calling 的 Structured Outputs 或者是 json_object)
     # 本例使用最新的 beta.parse (Structured Outputs)
