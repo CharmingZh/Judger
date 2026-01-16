@@ -206,12 +206,23 @@ def generate_resume_endpoint(
 
     # 2. 保存到数据库
     # Save to DB
+    input_data = {
+       "name": name,
+       "email": contact_email,
+       "phone": phone,
+       "headline": headline,
+       "skills": skills,
+       "experience_text": experience_text,
+       "education_text": education_text,
+       "free_text": free_text,
+       "job_desc": job_desc,
+       "language": language
+    }
+    
     new_resume = models.Resume(
         user_id=user_id,
-        title=f"{name}的简历",
-        content_json=resume_out.model_dump_json() # Pydantic v2
-    )
-        content_json=resume_out.model_dump_json() # Pydantic v2
+        input_json=json.dumps(input_data, ensure_ascii=False),
+        output_json=resume_out.model_dump_json() # Pydantic v2
     )
     db.add(new_resume)
     db.commit()
@@ -239,7 +250,7 @@ def view_resume(request: Request, resume_id: int, db: Session = Depends(get_db))
 
     # 解析 JSON
     # Parse JSON
-    data = json.loads(resume.content_json)
+    data = json.loads(resume.output_json)
 
     return templates.TemplateResponse("resume.html", {
         "request": request, 
@@ -266,7 +277,7 @@ def download_pdf(request: Request, resume_id: int, db: Session = Depends(get_db)
     if not resume:
         return Response("Resume not found", status_code=404)
 
-    data_dict = json.loads(resume.content_json)
+    data_dict = json.loads(resume.output_json)
     # 转换为 Schema
     try:
         resume_schema = ResumeOut(**data_dict)
