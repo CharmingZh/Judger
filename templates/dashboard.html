@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="mb-3">生成简历</h3>
+
+        <form method="post" action="/generate">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">语言</label>
+              <select class="form-select" name="language">
+                <option value="zh" selected>中文</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">目标岗位标题（可选）</label>
+              <input class="form-control" name="headline" placeholder="例如：数据分析师 / 后端工程师">
+            </div>
+
+            <hr class="my-3">
+
+            <h5 class="mb-0">详细输入（结构化）</h5>
+
+            <div class="col-md-6">
+              <label class="form-label">姓名</label>
+              <input class="form-control" name="name" placeholder="张三">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">所在城市</label>
+              <input class="form-control" name="location" placeholder="上海">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">邮箱</label>
+              <input class="form-control" name="contact_email" type="email" placeholder="you@example.com">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">电话</label>
+              <input class="form-control" name="phone" placeholder="+86 ...">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">LinkedIn（可选）</label>
+              <input class="form-control" name="linkedin" placeholder="https://linkedin.com/in/...">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">GitHub/作品集（可选）</label>
+              <input class="form-control" name="github" placeholder="https://github.com/...">
+            </div>
+            <div class="col-12">
+              <label class="form-label">个人网站（可选）</label>
+              <input class="form-control" name="website" placeholder="https://...">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">技能（用逗号分隔）</label>
+              <input class="form-control" name="skills" placeholder="Python, SQL, FastAPI, ...">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">工作经历（建议按条目写，越具体越好）</label>
+              <textarea class="form-control" name="experience_text" rows="5"
+                placeholder="例：
+- 2022-01~2024-06  某公司  数据分析师  上海
+  * 搭建XX报表体系..."></textarea>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">教育经历（可选）</label>
+              <textarea class="form-control" name="education_text" rows="3"
+                placeholder="例：
+- 2018~2022 某大学  本科  计算机科学"></textarea>
+            </div>
+
+            <hr class="my-3">
+            <h5 class="mb-0">模糊输入（自由文本，可选）</h5>
+
+            <div class="col-12">
+              <label class="form-label">自由输入（你可以随便写：做过什么、擅长什么、项目亮点等）</label>
+              <textarea class="form-control" name="free_text" rows="6"
+                placeholder="例如：
+我做过A/B测试、用户增长分析，主导过一个从0到1的数据平台..."></textarea>
+            </div>
+
+            <hr class="my-3">
+            <h5 class="mb-0">岗位JD（强烈建议填写）</h5>
+
+            <div class="col-12">
+              <label class="form-label">招聘JD</label>
+              <textarea class="form-control" name="job_desc" rows="6"
+                placeholder="把岗位描述粘贴到这里"></textarea>
+            </div>
+
+            <div class="col-12">
+              <button class="btn btn-primary w-100" type="submit">调用 AI 生成简历</button>
+              <div class="form-text mt-2">
+                提示：如果你担心“编造”，请在自由输入里写明“禁止虚构任何内容”，系统也会严格遵守。
+              </div>
+            </div>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h4 class="mb-3">我的简历历史</h4>
+        {% if resumes %}
+          <div class="list-group">
+            {% for r in resumes %}
+              <a class="list-group-item list-group-item-action" href="/resume/{{ r.id }}">
+                <div class="d-flex justify-content-between">
+                  <div class="fw-semibold">简历 #{{ r.id }}</div>
+                  <div class="text-muted small">{{ r.created_at }}</div>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-muted">暂无记录。</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
