@@ -29,5 +29,6 @@ class Resume(Base):
 
     input_json: Mapped[str] = mapped_column(Text, nullable=False)
     output_json: Mapped[str] = mapped_column(Text, nullable=False)
+    ai_usage: Mapped[str] = mapped_column(Text, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="resumes")

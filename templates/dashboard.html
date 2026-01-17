@@ -93,8 +93,21 @@
                 placeholder="把岗位描述粘贴到这里"></textarea>
             </div>
 
-            <div class="col-12">
-              <button class="btn btn-primary w-100" type="submit">调用 AI 生成简历</button>
+            <hr class="my-3">
+            <h5 class="mb-0">高级设置 (AI Settings)</h5>
+            <div class="col-12 col-md-6">
+                <label class="form-label">选择模型 (Select Model)</label>
+                <select class="form-select" name="openai_model">
+                    <option value="gpt-4o-2024-08-06" selected>gpt-4o (推荐 Recommended)</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini (快速 Fast/Cheap)</option>
+                    <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                    <option value="gpt-5.2">gpt-5.2 (实验性/不存在 Experimental)</option>
+                </select>
+                <div class="form-text">提示：gpt-5.2 可能不可用；gpt-3.5 可能不支持结构化输出。</div>
+            </div>
+
+            <div class="col-12 mt-4">
+              <button class="btn btn-primary w-100" type="submit">调用 AI 生成简历 | Generate Resume</button>
               <div class="form-text mt-2">
                 提示：如果你担心“编造”，请在自由输入里写明“禁止虚构任何内容”，系统也会严格遵守。
               </div>

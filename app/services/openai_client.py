@@ -9,7 +9,7 @@ from ..core.config import settings
 from ..core.schemas import ResumeOut
 
 # 加载 Prompt 文件
-PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "resume_generator_v1.txt"
+PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "resume_generator_v2.txt"
 
 def load_system_prompt() -> str:
     """Read system prompt from file"""
@@ -63,11 +63,13 @@ def generate_resume(
     education_text: str,
     free_text: str,
     job_desc: str,
-    language: str
-) -> ResumeOut:
+    language: str,
+    model_name: str = "gpt-4o-2024-08-06"
+) -> tuple[ResumeOut, dict]:
     """
     调用 OpenAI API 生成简历数据结构
     Call OpenAI API to generate resume data structure
+    Returns: (ResumeOut, usage_dict)
     """
     
     system_prompt = load_system_prompt()
@@ -107,9 +109,11 @@ def generate_resume(
 
     # 调用 ChatCompletion (使用 tool_calls/function_calling 的 Structured Outputs 或者是 json_object)
     # 本例使用最新的 beta.parse (Structured Outputs)
+    # Use selected model or fallback to default
+    target_model = model_name if model_name else settings.openai_model
     try:
         completion = client.beta.chat.completions.parse(
-            model=settings.openai_model,
+            model=target_model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
@@ -118,22 +122,24 @@ def generate_resume(
         )
         
         message = completion.choices[0].message
+        usage = completion.usage.model_dump() if completion.usage else {}
+        
         if message.parsed:
-            return message.parsed
+            return message.parsed, usage
         else:
             # Fallback (Refusal)
             print("Refusal:", message.refusal)
             return ResumeOut(
-                personal_info={"name": user_name, "email": user_email, "phone": user_phone},
+                contact={"name": name, "email": email, "phone": phone},
                 summary="AI无法生成简历，请检查输入。(AI failed to generate resume)",
-                education=[], work_experience=[], skills=[]
-            )
+                education=[], experience=[], skills=[]
+            ), usage
 
     except Exception as e:
         print(f"OpenAI API Error: {e}")
         # 返回空对象以防崩溃
         return ResumeOut(
-            personal_info={"name": user_name, "email": user_email, "phone": user_phone},
+            contact={"name": name, "email": email, "phone": phone},
             summary=f"Error generating resume: {e}",
-            education=[], work_experience=[], skills=[]
-        )
+            education=[], experience=[], skills=[]
+        ), {}

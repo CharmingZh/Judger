@@ -103,6 +103,42 @@
       </ul>
     {% endif %}
 
+    {% if usage %}
+    <div class="mt-5 border-top pt-3">
+        <h6 class="text-secondary">开发调试信息 (Developer Info)</h6>
+        <div class="card bg-light">
+            <div class="card-body font-monospace small">
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <td style="width: 150px;">Prompt Tokens:</td>
+                            <td>{{ usage.prompt_tokens }}</td>
+                        </tr>
+                        <tr>
+                            <td>Completion Tokens:</td>
+                            <td>{{ usage.completion_tokens }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Total Tokens:</td>
+                            <td class="fw-bold">{{ usage.total_tokens }}</td>
+                        </tr>
+                         {% if usage.completion_tokens_details %}
+                        <tr>
+                            <td>Reasoning Tokens:</td>
+                            <td>{{ usage.completion_tokens_details.reasoning_tokens }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+                <details class="mt-2">
+                    <summary class="cursor-pointer text-primary">查看完整 Usage JSON</summary>
+                    <pre class="mt-2 mb-0">{{ usage | tojson(indent=2) }}</pre>
+                </details>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
   </div>
 </div>
 {% endblock %}

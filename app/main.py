@@ -175,6 +175,7 @@ def generate_resume_endpoint(
     education_text: str = Form("", alias="education_text"),
     free_text: str = Form("", alias="free_text"),
     job_desc: str = Form("", alias="job_desc"),
+    openai_model: str = Form("gpt-4o-2024-08-06", alias="openai_model"),
     db: Session = Depends(get_db)
 ):
     """
@@ -187,7 +188,7 @@ def generate_resume_endpoint(
 
     # 1. 组合所有信息调用 Agent
     # Combine all inputs and call Agent
-    resume_out = generate_resume(
+    resume_out, ai_usage = generate_resume(
         name=name,
         email=contact_email,
         phone=phone,
@@ -201,7 +202,8 @@ def generate_resume_endpoint(
         education_text=education_text,
         free_text=free_text,
         job_desc=job_desc,
-        language=language
+        language=language,
+        model_name=openai_model
     )
 
     # 2. 保存到数据库
@@ -222,7 +224,8 @@ def generate_resume_endpoint(
     new_resume = models.Resume(
         user_id=user_id,
         input_json=json.dumps(input_data, ensure_ascii=False),
-        output_json=resume_out.model_dump_json() # Pydantic v2
+        output_json=resume_out.model_dump_json(), # Pydantic v2
+        ai_usage=json.dumps(ai_usage, ensure_ascii=False)
     )
     db.add(new_resume)
     db.commit()
@@ -251,10 +254,12 @@ def view_resume(request: Request, resume_id: int, db: Session = Depends(get_db))
     # 解析 JSON
     # Parse JSON
     data = json.loads(resume.output_json)
+    usage = json.loads(resume.ai_usage) if resume.ai_usage else {}
 
     return templates.TemplateResponse("resume.html", {
         "request": request, 
         "resume": data,
+        "usage": usage,
         "resume_id": resume.id,
         "title": "简历预览 Resume Preview"
     })
