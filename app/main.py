@@ -28,6 +28,19 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Resume Builder")
 app.include_router(openai_test_router)
 
+def ensure_db_schema() -> None:
+    """
+    兼容旧库：补齐缺失字段
+    Backfill missing columns for existing SQLite DB
+    """
+    if not settings.database_url.startswith("sqlite"):
+        return
+    with engine.connect() as conn:
+        result = conn.exec_driver_sql("PRAGMA table_info(resumes)")
+        cols = {row[1] for row in result.fetchall()}
+        if "ai_usage" not in cols:
+            conn.exec_driver_sql("ALTER TABLE resumes ADD COLUMN ai_usage TEXT")
+
 def ensure_test_user() -> None:
     """
     创建测试账号 (开发环境)
@@ -48,6 +61,7 @@ def ensure_test_user() -> None:
 
 @app.on_event("startup")
 def startup_seed_test_user() -> None:
+    ensure_db_schema()
     ensure_test_user()
 # 配置 Session 中间件
 # Session Middleware Configuration
@@ -147,6 +161,15 @@ def logout(request: Request):
     """
     退出登录
     Logout
+    """
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=302)
+
+@app.post("/logout")
+def logout_post(request: Request):
+    """
+    退出登录 (POST)
+    Logout (POST)
     """
     request.session.clear()
     return RedirectResponse(url="/login", status_code=302)
