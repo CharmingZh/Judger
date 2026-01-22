@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenAI API 连接测试</title>
+  <style>
+    :root{
+      --primary:#1677ff;
+      --header:#10c5e8;
+      --border:#e5e7eb;
+      --muted:#6b7280;
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --success-bg:#d1e7dd;
+      --success-bd:#badbcc;
+      --danger-bg:#f8d7da;
+      --danger-bd:#f5c2c7;
+    }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:#111827; }
+    .topbar{
+      height:54px; background:#fff; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; padding:0 18px;
+    }
+    .brand{ font-size:22px; font-weight:700; }
+    .btn-link{
+      border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:8px;
+      text-decoration:none; color:#111827; font-size:14px;
+    }
+    .wrap{ display:flex; justify-content:center; padding:28px 16px; }
+    .card{
+      width:min(900px, 96vw); background:var(--card); border:1px solid var(--border);
+      border-radius:10px; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,.06);
+    }
+    .card-header{
+      background:var(--header); color:#fff; font-size:22px; font-weight:800;
+      padding:14px 18px;
+    }
+    .card-body{ padding:18px; }
+    .hint{ margin:0 0 10px 0; }
+    .hint-en{ margin:0 0 16px 0; color:#111827; }
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px; }
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    label{ font-size:13px; color:#374151; }
+    input, textarea{
+      border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px;
+      outline:none; background:#fff;
+    }
+    textarea{ min-height:76px; resize:vertical; }
+    .btn{
+      width:100%; border:none; border-radius:10px; padding:14px 16px;
+      font-size:18px; font-weight:800; color:#fff; background:var(--primary);
+      cursor:pointer;
+    }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    hr{ border:none; border-top:1px solid var(--border); margin:18px 0; }
+    .section-title{ font-size:18px; font-weight:800; margin:0 0 10px 0; }
+    .alert{
+      border-radius:10px; padding:14px 14px; border:1px solid transparent;
+      line-height:1.6;
+    }
+    .alert.success{ background:var(--success-bg); border-color:var(--success-bd); }
+    .alert.danger{ background:var(--danger-bg); border-color:var(--danger-bd); }
+    .mono{
+      margin-top:10px; background:#f3f4f6; border:1px solid var(--border);
+      border-radius:10px; padding:12px; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:12px; white-space:pre; overflow:auto;
+    }
+    .footer{
+      border-top:1px solid var(--border); padding:12px 18px; color:#374151; font-size:14px;
+    }
+    .model{ color:#d946ef; font-weight:800; }
+    .center{ display:flex; justify-content:center; padding:18px; }
+    .back{ padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:#fff; text-decoration:none; color:#111827; }
+    @media (max-width: 720px){
+      .row{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="brand">Resume Builder</div>
+    <a class="btn-link" href="/logout">退出登录</a>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="card-header">OpenAI API 连接测试 (API Connection Test)</div>
+
+      <div class="card-body">
+        <p class="hint">点击下方按钮向 OpenAI 发送一条简短的测试消息。</p>
+        <p class="hint-en">Click the button below to send a short test message to OpenAI.</p>
+
+        <div class="row">
+          <div class="field">
+            <label>API Base URL（可选，留空用默认）</label>
+            <input id="baseUrl" placeholder="https://api.openai.com/v1 或你的中转站地址" />
+          </div>
+          <div class="field">
+            <label>API Key（可选，留空用服务端环境变量 OPENAI_API_KEY）</label>
+            <input id="apiKey" type="password" placeholder="sk-..." />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Proxy URL（可选，例如 http://127.0.0.1:7890）</label>
+            <input id="proxyUrl" value="http://127.0.0.1:7890" />
+          </div>
+          <div class="field">
+            <label>Use System Proxy（可选）</label>
+            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px;">
+              <input id="trustEnv" type="checkbox" />
+              <div style="font-size:14px; color:#374151; line-height:1.4;">
+                允许使用系统代理环境/系统代理（不勾选则仅使用上面填写的 Proxy URL 或直连）
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Model</label>
+            <input id="model" value="gpt-4o-2024-08-06" />
+          </div>
+          <div class="field">
+            <label>Timeout（秒）</label>
+            <input id="timeout" type="number" value="30" min="1" />
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label>测试消息（Test Prompt）</label>
+          <textarea id="prompt">Health check: please reply with "Health check passed."</textarea>
+        </div>
+
+        <button id="btn" class="btn">开始测试 (Start Test)</button>
+
+        <hr />
+
+        <div class="section-title">测试结果 (Result):</div>
+        <div id="result" class="alert success" style="display:none;"></div>
+
+        <div style="margin-top:14px;">
+          <div class="section-title" style="font-size:16px;">Usage Stats:</div>
+          <div id="usage" class="mono" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="footer">
+        当前使用的模型 (Current Model): <span id="currentModel" class="model">-</span>
+      </div>
+
+      <div class="center">
+        <a class="back" href="/dashboard">返回仪表盘 (Back to Dashboard)</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const btn = document.getElementById("btn");
+    const elResult = document.getElementById("result");
+    const elUsage = document.getElementById("usage");
+    const elCurrentModel = document.getElementById("currentModel");
+
+    function showSuccess(html){ elResult.className = "alert success"; elResult.innerHTML = html; elResult.style.display="block"; }
+    function showError(html){ elResult.className = "alert danger";  elResult.innerHTML = html; elResult.style.display="block"; }
+
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "测试中... (Testing...)";
+      elResult.style.display = "none";
+      elUsage.style.display = "none";
+      elCurrentModel.textContent = "-";
+
+      const payload = {
+        base_url: document.getElementById("baseUrl").value.trim() || null,
+        api_key: document.getElementById("apiKey").value.trim() || null,
+        proxy_url: document.getElementById("proxyUrl").value.trim() || null,
+        trust_env: document.getElementById("trustEnv").checked,
+        model: document.getElementById("model").value.trim(),
+        timeout_s: Number(document.getElementById("timeout").value || 30),
+        prompt: document.getElementById("prompt").value
+      };
+
+      try{
+        const resp = await fetch("/api/openai/test", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok || !data.ok){
+          const msg = data?.error?.message || data?.message || "Unknown error";
+          const code = data?.error?.code ? ` (${data.error.code})` : "";
+          showError(`<b>连接失败 (Connection Failed)!</b><br/><b>Error:</b> ${msg}${code}`);
+          elCurrentModel.textContent = payload.model || "-";
+        }else{
+          showSuccess(
+            `<b>连接成功 (Connected Successfully)!</b><br/>` +
+            `<b>Response:</b> ${data.message || "OK"}<br/>` +
+            `<span style="color:#374151;">Model: ${data.model || payload.model}</span>`
+          );
+          elCurrentModel.textContent = data.model || payload.model || "-";
+
+          if (data.usage){
+            elUsage.textContent = JSON.stringify(data.usage, null, 2);
+            elUsage.style.display = "block";
+          }
+        }
+      }catch(e){
+        showError(`<b>连接失败 (Connection Failed)!</b><br/><b>Error:</b> ${e}`);
+        elCurrentModel.textContent = payload.model || "-";
+      }finally{
+        btn.disabled = false;
+        btn.textContent = "开始测试 (Start Test)";
+      }
+    });
+  </script>
+</body>
+</html>
