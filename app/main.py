@@ -25,7 +25,7 @@ from .services.pdf_export import build_resume_pdf
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Resume Builder")
-
+app.include_router(openai_test_router)
 # 配置 Session 中间件
 # Session Middleware Configuration
 app.add_middleware(
