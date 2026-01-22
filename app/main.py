@@ -17,7 +17,6 @@ from .core import models
 from .core.schemas import ResumeOut
 
 from .api.auth import get_user_by_email, create_user, verify_password
-from .api.openai_test import router as openai_test_router
 from .services.openai_client import generate_resume, test_api_connection
 from .services.pdf_export import build_resume_pdf
 
@@ -26,7 +25,6 @@ from .services.pdf_export import build_resume_pdf
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Resume Builder")
-app.include_router(openai_test_router)
 
 def ensure_db_schema() -> None:
     """
@@ -102,6 +100,8 @@ def register_page(request: Request):
     注册页面
     Register Page
     """
+    if require_login(request):
+        return RedirectResponse(url="/dashboard", status_code=302)
     return templates.TemplateResponse("register.html", {"request": request, "title": "注册 Register"})
 
 @app.post("/register", response_class=HTMLResponse)
@@ -133,6 +133,8 @@ def login_page(request: Request):
     登录页面
     Login Page
     """
+    if require_login(request):
+        return RedirectResponse(url="/dashboard", status_code=302)
     return templates.TemplateResponse("login.html", {"request": request, "title": "登录 Login"})
 
 @app.post("/login", response_class=HTMLResponse)
