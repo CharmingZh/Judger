@@ -19,11 +19,23 @@ Copy `.env.example` -> `.env` and set:
 - `OPENAI_API_KEY`
 - `SESSION_SECRET` (use a long random string)
 
+Optional (development only):
+- `TEST_USER_ENABLED` (default: true)
+- `TEST_USER_EMAIL` (default: test@example.com)
+- `TEST_USER_PASSWORD` (default: test123456)
+
 ## 3) Run
 ```bash
 uvicorn app.main:app --reload
 ```
 Open: http://127.0.0.1:8000
+
+## Test account (dev)
+When `TEST_USER_ENABLED=true`, the app will auto-create a test account at startup (if it doesn't already exist):
+- Email: `test@example.com`
+- Password: `test123456`
+
+Disable in production by setting `TEST_USER_ENABLED=false` and change the password if you keep it enabled.
 
 ## 4) PyCharm
 - Open this folder as a project

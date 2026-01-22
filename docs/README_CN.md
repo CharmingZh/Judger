@@ -51,6 +51,11 @@ CV_Helper/
    OPENAI_API_KEY=sk-proj-...
    ```
 
+   可选（仅开发环境）：
+   - `TEST_USER_ENABLED`（默认 true）
+   - `TEST_USER_EMAIL`（默认 test@example.com）
+   - `TEST_USER_PASSWORD`（默认 test123456）
+
 2. **启动命令**：
    在终端运行：
    ```powershell
@@ -63,6 +68,13 @@ CV_Helper/
 
 3. **访问**：
    打开浏览器访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+## 6. 测试账号 (开发环境)
+当 `TEST_USER_ENABLED=true` 时，应用启动会自动创建测试账号（若不存在）：
+- 邮箱：`test@example.com`
+- 密码：`test123456`
+
+生产环境建议设置 `TEST_USER_ENABLED=false`，或至少修改密码。
 
 ## 5. 安全注意事项 (Security Notes)
 

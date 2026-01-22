@@ -12,11 +12,12 @@ import json
 # 更新模块引用 to core, api, services
 # Updated imports to core, api, services
 from .core.config import settings
-from .core.db import Base, engine, get_db
+from .core.db import Base, engine, get_db, SessionLocal
 from .core import models
 from .core.schemas import ResumeOut
 
 from .api.auth import get_user_by_email, create_user, verify_password
+from .api.openai_test import router as openai_test_router
 from .services.openai_client import generate_resume, test_api_connection
 from .services.pdf_export import build_resume_pdf
 
@@ -26,6 +27,28 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Resume Builder")
 app.include_router(openai_test_router)
+
+def ensure_test_user() -> None:
+    """
+    创建测试账号 (开发环境)
+    Create a test account (development only)
+    """
+    if not settings.test_user_enabled:
+        return
+    email = settings.test_user_email.strip()
+    password = settings.test_user_password
+    if not email or not password:
+        return
+    db = SessionLocal()
+    try:
+        if not get_user_by_email(db, email):
+            create_user(db, email, password)
+    finally:
+        db.close()
+
+@app.on_event("startup")
+def startup_seed_test_user() -> None:
+    ensure_test_user()
 # 配置 Session 中间件
 # Session Middleware Configuration
 app.add_middleware(

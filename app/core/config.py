@@ -23,4 +23,9 @@ class Settings(BaseSettings):
     # 数据库连接 URL
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 
+    # 测试账号 (仅开发环境)
+    test_user_enabled: bool = os.getenv("TEST_USER_ENABLED", "true").lower() in {"1", "true", "yes"}
+    test_user_email: str = os.getenv("TEST_USER_EMAIL", "test@example.com")
+    test_user_password: str = os.getenv("TEST_USER_PASSWORD", "test123456")
+
 settings = Settings()
